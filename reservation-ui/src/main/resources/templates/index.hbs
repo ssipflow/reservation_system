@@ -1,0 +1,201 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>예약관리시스템</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <link rel="stylesheet" href="/css/lib/jquery-ui.min.css"/>
+    <link rel="stylesheet" href="/css/lib/jquery.timepicker.min.css"/>
+
+    <script src="/js/lib/jquery.min.js"></script>
+    <script src="/js/lib/jquery-ui.min.js"></script>
+    <script src="/js/lib/jquery.timepicker.min.js"></script>
+</head>
+<body>
+    <h3>예약하기</h3>
+    <div>
+        <span>회의실:</span>
+        <select id="room_id">
+            <option value="room-a">회의실 A</option>
+            <option value="room-b">회의실 B</option>
+            <option value="room-c">회의실 C</option>
+            <option value="room-d">회의실 D</option>
+            <option value="room-e">회의실 E</option>
+            <option value="room-f">회의실 F</option>
+            <option value="room-g">회의실 G</option>
+            <option value="room-h">회의실 H</option>
+            <option value="room-i">회의실 I</option>
+            <option value="room-j">회의실 J</option>
+        </select>
+    </div>
+
+    <div>
+        <span>사용자:</span>
+        <input type="text" id="user">
+    </div>
+
+    <div>
+        <span>예약일:</span>
+        <input type="text" id="reserve_date" style="cursor:pointer" readonly>
+    </div>
+
+    <div>
+        <span>시작시간:</span>
+        <input type="text" id="start_time_picker" style="cursor:pointer" readonly>
+    </div>
+
+    <div>
+        <span>종료시간:</span>
+        <input type="text" id="end_time_picker" style="cursor:pointer" readonly>
+    </div>
+
+    <div>
+        <span>N주 반복:</span>
+        <input type="text" id="repeat">
+    </div>
+
+    <div>
+        <button id="btn_input">예약</button>
+    </div>
+
+    <div>
+        <h3>결과</h3>
+        <textarea id="result" readonly style="resize:none; width:400px; height:50px"></textarea>
+    </div>
+
+    <div>
+        <h3>예약 현황</h3>
+        일자: <input type="text" id="cal_date" style="cursor:pointer" readonly>
+    </div>
+
+    <div>
+        <table border="1">
+            <thead>
+            <tr>
+                <th>회의실</th>
+                <th>예약시간</th>
+                <th>예약자</th>
+            </tr>
+            </thead>
+            <tbody id="td_code">
+
+            </tbody>
+        </table>
+    </div>
+
+    <script src="/js/lib/app/main.js"></script>
+</body>
+</html>
+<script>
+    <!--var res_obj = JSON.parse({{reservationsObj}});-->
+    <!--var reserved_list = res_obj.reserved_list;-->
+    <!--var td_code = "";-->
+
+    <!--for(var i = 0; i < reserved_list.length; i++) {-->
+        <!--room_id = reserved_list[i].room;-->
+        <!--user = reserved_list[i].user;-->
+        <!--start_time = reserved_list[i].start_time.split("T")[1];-->
+        <!--end_time = reserved_list[i].end_time.split("T")[1];-->
+
+        <!--td_code += "<tr><td>회의실 " + room_id.split("-")[1].toUpperCase() + "</td><td>" + start_time + " - " + end_time + "</td><td>" + user + "</td></tr>"-->
+    <!--}-->
+
+    <!--$("#td_code").html(td_code);-->
+
+    $(function() {
+        $('#reserve_date').datepicker({
+            dateFormat: 'yy-mm-dd',
+            changeMonth: true,
+            changeYear: true
+        });
+
+        $('#reserve_date').datepicker('setDate', new Date());
+
+        $('#cal_date').datepicker({
+            dateFormat: 'yy-mm-dd',
+            changeMonth: true,
+            changeYear: true,
+            onSelect: function(date) {
+                date += "T00:00:00";
+                $.ajax({
+                    type        : 'GET',
+                    url         : '/reservations?d='+date,
+                    dataType    : 'JSON',
+                }).done(function(res) {
+                    // Timetable 변경
+                    var reserved_list = res.reserved_list;
+                    var td_code = "";
+
+                    for(var i = 0; i < reserved_list.length; i++) {
+                        room_id = reserved_list[i].room;
+                        user = reserved_list[i].user;
+                        start_time = reserved_list[i].start_time.split("T")[1];
+                        end_time = reserved_list[i].end_time.split("T")[1];
+
+                        td_code += "<tr><td>회의실 " + room_id.split("-")[1].toUpperCase() + "</td><td>" + start_time + " - " + end_time + "</td><td>" + user + "</td></tr>"
+                    }
+
+                    $("#td_code").html(td_code);
+                });
+            }
+        });
+
+        $('#cal_date').datepicker('setDate', new Date());
+
+        $('#start_time_picker').timepicker({
+            timeFormat: 'HH:mm',
+            interval: 30,
+            dynamic: false
+        });
+
+        $('#end_time_picker').timepicker({
+            timeFormat: 'HH:mm',
+            interval: 30,
+            dynamic: false,
+            change: function(time) {
+                var start_time = $("#start_time_picker").val();
+                var end_time = $("#end_time_picker").val();
+
+                if(start_time == null || start_time == "") {
+                    alert("시작 시간을 선택하세요");
+                    $("#end_time_picker").val("");
+                    return ;
+                }
+
+                if(start_time > end_time) {
+                    alert("종료 시간은 시작시간보다 커야 합니다.");
+                    $("#end_time_picker").val("");
+                    return ;
+                }
+            }
+        });
+
+        $.ajax({
+            type        : 'GET',
+            url         : '/reservations?d=',
+            dataType    : 'JSON',
+        }).done(function(res) {
+            // Timetable 변경
+            var reserved_list = res.reserved_list;
+            var td_code = "";
+
+            for(var i = 0; i < reserved_list.length; i++) {
+                room_id = reserved_list[i].room;
+                user = reserved_list[i].user;
+                start_time = reserved_list[i].start_time.split("T")[1];
+                end_time = reserved_list[i].end_time.split("T")[1];
+
+                td_code += "<tr><td>회의실 " + room_id.split("-")[1].toUpperCase() + "</td><td>" + start_time + " - " + end_time + "</td><td>" + user + "</td></tr>"
+            }
+
+            $("#td_code").html(td_code);
+        });
+    });
+</script>
+
+<style>
+    div {
+        padding: 3px;
+    }
+</style>
